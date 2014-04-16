@@ -14,11 +14,30 @@ END_GRID = (14, 7)
 
 GRIDS = Map(TEST_MAP)
 
-def wheel_select(groups):
+def print_map(chromo, path):
+   
+    smap = TEST_MAP[:]
+    for row in xrange(len(smap)):
+        for col,val in enumerate(smap[row]):
+            
+            if val == 1:
+                smap[row][col] = u"#"
+            if val == 0:
+                smap[row][col] = u' '
 
-    pass
+    for x,y in path:
+        try:
+            smap[y][x] = '.'
+        except IndexError:
+            pass
 
-def cal_fitness(chromo):
+    result = ""
+    for row in smap:
+        result += u"{0}\n".format(u''.join([str(col) for col in row]))
+    return result
+
+
+def cal_fitness(chromo, result_path=False):
     x, y = START_GRID
     path = []
     for vet in chromo:
@@ -37,15 +56,20 @@ def cal_fitness(chromo):
             grid = GRIDS[y][x]
         except IndexError:
             break
-        if (x,y ) in path:
-            return 0 
+
+        if (x,y) in path:
+            break
         if grid.point == 0:
             path.append((x,y))
         elif grid.point == 8:
             path.append((x,y))
+            if result_path:
+                return path
             return 1
-        elif grid.point in (5, 1):
+        elif grid.point == 1:
             break
+        elif grid.point == 5:
+            return 0
 
     if path and path[-1]:
         return 1/float(abs(END_GRID[0] - path[-1][0])+abs(END_GRID[1] - path[-1][1])+1)
@@ -67,7 +91,7 @@ def weigth_choice(groups):
 
 def main():
     winner = None
-    init_group = [VimChromosome(70) for x in xrange(100)]
+    init_group = [VimChromosome(20) for x in xrange(100)]
     fit_group = sorted([(cal_fitness(x),x) for x in init_group],
                         key=lambda x:-x[0])
     print "start"
@@ -82,20 +106,22 @@ def main():
         if best[0] >= 1:
             winner = best
             print "We have a winner {0}:{1._chromo}".format(best[0], best[1])
+            smap = print_map(best[1], cal_fitness(best[1], True))
+            print smap
             break
         print "Current Best:{0}\n{1}".format(best[0], best[1]._chromo)
        
-        while len(children) <= 100:
+        while len(children) < 100:
             if  random.uniform(0, 1) <= CROSSOVER_RATE:
                 father = weigth_choice(fit_group)
                 mother = weigth_choice(fit_group)
             
                 new_borned = father.crossover(mother)
+                new_borned.mutate()
                 children.append(new_borned)
 
         fit_group = sorted([(cal_fitness(x),x) for x in children],
                         key=lambda x:-x[0])
-        print children[:2]
         epoch += 1
 
 if __name__ == '__main__':
